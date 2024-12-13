@@ -209,9 +209,9 @@ curl localhost:8888 \
   -H "ce-specversion: 1.0" \
   -H "ce-time: 2020-01-02T12:34:56.789Z" \
   -H "ce-type: google.cloud.pubsub.topic.v1.messagePublished" \
-  -H "ce-source: //pubsub.googleapis.com/projects/MY-PROJECT/topics/MY-TOPIC" \
+  -H "ce-source: //pubsub.googleapis.com/projects/dev-iot-application/topics/sensor_data" \
   -d '{"message": {"data": "eyJkYXkiOiAiMjAyNC0xMS0yOSIsICJ0aW1lc3RhbXAiOiAiMjAyNC0xMS0yOVQxNDozMzozNS44NTVaIiwgImRhdGEiOiB7Im1hYyI6IjQ3OkVGOjAwOjAwOjAxOjEyIiwidGVtcGVyYXR1cmUiOiAyMi45MzgsImh1bWlkaXR5IjogNDMuMzEyfX0K", 
-  "attributes": {"dataset_id":"sensor_data", "table_id":"thermo_beacon_data"}}, 
+  "attributes": {"dataset_id":"sensor_data", "table_id":"sensor_thermo_beacon"}}, 
   "subscription": "projects/MY-PROJECT/subscriptions/MY-SUB"}'
 ```
 
@@ -220,7 +220,7 @@ or, for testing in the cloud console:
 {
   "_comment": "data is base64 encoded string",
   "data": "eyJkYXkiOiAiMjAyNC0xMS0yOSIsICJ0aW1lc3RhbXAiOiAiMjAyNC0xMS0yOVQxNDozMzozNS44NTVaIiwgImRhdGEiOiB7Im1hYyI6IjQ3OkVGOjAwOjAwOjAxOjEyIiwidGVtcGVyYXR1cmUiOiAyMi45MzgsImh1bWlkaXR5IjogNDMuMzEyfX0K",
-  "attributes": {"dataset_id":"sensor_data","table_id":"thermo_beacon_data"}
+  "attributes": {"dataset_id":"sensor_data","table_id":"sensor_thermo_beacon"}
 }
 ```
 
