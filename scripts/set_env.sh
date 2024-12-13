@@ -1,0 +1,4 @@
+export PROJECT_ID=dev-iot-application
+export OPENWEATHER_API_KEY=8d15b72a0559d24f47d114a072b39800
+export HOME_ID=1
+export IS_LOCAL_ENV=true

@@ -1,0 +1,12 @@
+*.json
+Dockerfile
+venv/
+__pycache__
+.idea/
+*.iml
+scripts/
+README.md
+LICENSE
+sensor_reader.properties
+.dockerignore
+.gitignore
