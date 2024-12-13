@@ -1,28 +1,18 @@
 # About
 
-This is the coding part of the project 
+This is the coding part of the IoT project "Designing Scalable System to estimate the Livability Score using readings from multiple sensors"
+
+The CoLab with EDA can be found here:
 
 https://colab.research.google.com/drive/1HkPLzr-0rOI0DGFfpil3vhfFbePAtYSA
 
-sudo docker build -t raspberrypi -f Dockerfile-rspi
-
-sudo docker run -v /var/run/dbus/:/var/run/dbus/:z --privileged raspberrypi
-sudo docker run -p 8080:8080 -it bash 
-
-sudo docker secret create dev-sensor-sa-key.json < dev-sensor-sa-key.json
-
-Main references
-
-https://openweathermap.org/api
-https://openweathermap.org/current
-
 # Architecture
 
-In our approach 
+![High level architecture](pict/gcp_arch.png?raw=true "GCP Architecture")
 
-# Cloud infrastructure
+# Big Query table schema
 
-Add screenshots for schema
+Schema for the table `dev-iot-application.sensor_data.sensor_thermo_beacon`
 
 ```json
 [
@@ -69,33 +59,83 @@ Add screenshots for schema
     ]
   }
 ]
-
-
 ```
 
-# Deployment
+Schema for the table `dev-iot-application.sensor_data.weather_data`
 
-1. Create a new Pub/Sub topic to be linked to Function and a topic to publish the results to
-
+```json
+[
+  {
+    "mode": "REQUIRED",
+    "name": "day",
+    "type": "DATE"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "timestamp",
+    "type": "TIMESTAMP"
+  },
+  {
+    "name": "data",
+    "type": "RECORD",
+    "mode": "REQUIRED",
+    "fields": [
+      {
+        "mode": "NULLABLE",
+        "name": "temperature",
+        "type": "FLOAT64"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "humidity",
+        "type": "FLOAT64"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "pressure",
+        "type": "FLOAT64"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "wind_direction",
+        "type": "FLOAT64"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "wind_speed",
+        "type": "FLOAT64"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "sunrise",
+        "type": "TIMESTAMP"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "sunset",
+        "type": "TIMESTAMP"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "clouds",
+        "type": "FLOAT64"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "description",
+        "type": "STRING"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "location",
+        "type": "GEOGRAPHY"
+      }
+    ]
+  }
+]
 ```
-source ./set_env.sh
-gcloud config set project $PROJECT_ID
-gcloud pubsub topics create sensor_data
-```
-
-sudo docker run -v $(pwd):/workdir -it androidbuild
-buildozer android debug
-
 
 # Installation
-
- Project name
-dev-iot-application
-Project number
-936448459986
-Project ID
-dev-iot-application 
-
 
 Create a new project at GCP:
 
@@ -217,8 +257,9 @@ gcloud alpha functions deploy local cf_test \
 
 ```
 
-# references
+# References
 
 [1] https://cloud.google.com/functions/docs/running/functions-emulator
+
 [2] https://colab.research.google.com/drive/1HkPLzr-0rOI0DGFfpil3vhfFbePAtYSA
 
