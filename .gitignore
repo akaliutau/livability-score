@@ -18,6 +18,7 @@ target/
 *.crt
 *.key
 *.json
+shadow.txt
 
 dev_notes.txt
 test_data
