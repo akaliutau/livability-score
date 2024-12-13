@@ -132,7 +132,7 @@ Create a new project at GCP and modify the `scripts/set_env,sh` script with your
 
 gcloud --version
 bq version
-source ./set_env.sh 
+source scripts/set_env.sh 
 gcloud projects create "$PROJECT_ID"
 gcloud config set project "$PROJECT_ID"
 gcloud config get-value project
@@ -154,7 +154,7 @@ gcloud services enable eventarc.googleapis.com
 
 gcloud pubsub topics create sensor_data
 gcloud pubsub topics create meteo_data
-./create_dataset.sh
+scripts/create_dataset.sh
 ```
 
 Create SA with role `roles/pubsub.publisher` to send messages to PubSub topic:
@@ -171,9 +171,31 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
     --role=roles/secretmanager.secretAccessor
 ```
 
-The folders `cf_sensor_event` contains the python code for CF which inserts records into appropriate table
+Note the name of secret key `dev-sensor-sa-key.json` - it has to be used on each machine which will run python scripts to
+collect sensor data to publish messages to PubSub topic.
 
-One can test them locally:
+Create secret with name `OPENWEATHER_API_KEY` and value for the secret key to access http://api.openweathermap.org/api:
+
+```shell
+gcloud secrets create OPENWEATHER_API_KEY \
+  --replication-policy="automatic" \
+  --data-file=- < <(echo -n "$OPENWEATHER_API_KEY")
+```
+
+### Testing Cloud Functions locally:
+
+```shell
+functions-framework --target=event_processor --port=8888
+```
+
+```shell
+gcloud alpha functions deploy local cf_test \
+    --entry-point=event_processor \
+    --port=8888 \
+    --runtime=python312
+
+```
+This is the example of sample message:
 
 ```shell
 {\"day\": \"2024-11-29\", \"timestamp\": \"2024-11-29T14:33:35.855Z\", \"data\": {\"mac\":\"47:EF:00:00:01:12\",\"temperature\": 22.938,\"humidity\": 43.312}}
@@ -202,7 +224,7 @@ or, for testing in the cloud console:
 }
 ```
 
-# Deployment
+### Deployment of cloud functions
 
 ```shell
 gcloud functions deploy event_processor \
@@ -226,6 +248,8 @@ gcloud functions deploy meteodata_event \
 --set-env-vars PROJECT_ID=$PROJECT_ID
 ```
 
+Create a scheduler to invoke `meteodata_event` every 5 minutes 
+
 ```shell
 gcloud scheduler jobs create pubsub meteo_data_job  \
   --schedule="*/5 * * * *"  \
@@ -234,19 +258,6 @@ gcloud scheduler jobs create pubsub meteo_data_job  \
   --location=us-central1
 ```
 
-### Testing
-
-```shell
-functions-framework --target=event_processor --port=8888
-```
-
-```shell
-gcloud alpha functions deploy local cf_test \
-    --entry-point=event_processor \
-    --port=8888 \
-    --runtime=python312
-
-```
 ## FinOps consideration
 
 
