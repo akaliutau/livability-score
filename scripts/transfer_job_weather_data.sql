@@ -1,5 +1,5 @@
 DECLARE today DATE DEFAULT CURRENT_DATE();
-DECLARE start_date DATE DEFAULT DATE_SUB(today, INTERVAL 14 day);
+DECLARE start_date DATE DEFAULT DATE_SUB(today, INTERVAL 7 day);
 
 EXPORT DATA
   OPTIONS ( uri = CONCAT('gs://livability-score-archive-data/weather_data/', CAST(start_date AS STRING), '/*.gz'),

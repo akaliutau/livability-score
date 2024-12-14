@@ -7,6 +7,13 @@ The CoLab with EDA can be found here:
 
 https://colab.research.google.com/drive/1HkPLzr-0rOI0DGFfpil3vhfFbePAtYSA
 
+The archived data from tables `sensor_data.sensor_thermo_beacon` and `sensor_data.weather_data` can be downloaded 
+from GCS bucket `gs://livability-score-archive-data` (available to view via URL 
+https://console.cloud.google.com/storage/browser/livability-score-archive-data).
+
+For convenience and as an example, the data for the week 2024/12/01 - 2024/12/08 is duplicated in current
+repository (folder [data](/data)), mirroring the folder structure in GCS bucket. 
+
 ## Contents
 * [Introduction](#introduction)
 * [Sensors](#sensors)
@@ -33,7 +40,7 @@ sources.
 ## Sensors
 
 We aim to collect data from the thermometer/hygrometer sensor which potentially could have the generic schema with or
-without timestamps, other technical fields, etc. We are building our system on the basis of two primary principles:
+without timestamps, other technical fields, etc. We are building our system on the basis of the following guidelines:
 
 * loosely coupled architecture
 * embracing FinOps from day one
@@ -116,6 +123,10 @@ result is stored as a vector to specific path at GCS. The data from BigQuery tab
 4. The system is easily extensible via adding support for additional type of Event Processors, which can process output
 from sensors of various nature. Consistency is preserved thanks to loosely coupled architecture
 5. The system is designed with FinOps in mind (see the section below for cost estimation of our solution)
+
+The p.3 currently is implemented as a PoC, through notebook at Colab; pp. 4 and 5 are design recommendations and
+implemented as the architecture (didn't test
+)
 
 ### Security consideration
 
@@ -211,7 +222,7 @@ gcloud secrets create OPENWEATHER_API_KEY \
   --data-file=- < <(echo -n "$OPENWEATHER_API_KEY")
 ```
 
-Create bucket in `COLDLINE` class to store weekly amount of sensor data:
+Create bucket in `COLDLINE` class to store weekly amount of sensor data and make it public:
 
 ```shell
 gcloud storage buckets create gs://livability-score-archive-data \
@@ -219,6 +230,7 @@ gcloud storage buckets create gs://livability-score-archive-data \
   --default-storage-class=COLDLINE \
   --location=us-east1  \
   --uniform-bucket-level-access
+gsutil iam ch allUsers:roles/storage.objectViewer gs://livability-score-archive-data
 ```
 
 ### Testing Cloud Functions locally:
@@ -237,7 +249,7 @@ gcloud alpha functions deploy local cf_test \
 This is the example of sample message:
 
 ```shell
-{\"day\": \"2024-11-29\", \"timestamp\": \"2024-11-29T14:33:35.855Z\", \"data\": {\"mac\":\"47:EF:00:00:01:12\",\"temperature\": 22.938,\"humidity\": 43.312}}
+[{\"day\": \"2024-11-29\", \"timestamp\": \"2024-11-29T14:33:35.855Z\", \"data\": {\"mac\":123,\"temperature\": 22.938,\"humidity\": 43.312}}]
 ```
 
 ```shell
