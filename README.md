@@ -1,6 +1,6 @@
-# Designing Scalable System to estimate the Livability Score using readings from multiple sensors
+# Designing scalable system to estimate the Livability Score using readings from multiple sensors
 
-This is the coding part of the IoT project "Designing Scalable System to estimate the Livability Score 
+This is the coding part of the IoT project "Designing scalable system to estimate the Livability Score 
 using readings from multiple sensors"
 
 The CoLab with EDA can be found here:
@@ -11,7 +11,7 @@ https://colab.research.google.com/drive/1HkPLzr-0rOI0DGFfpil3vhfFbePAtYSA
 * [Introduction](#introduction)
 * [Sensors](#sensors)
 * [Data collecting and processing](#data-collecting-and-processing)
-* [Cloud Architecture](#cloud-architecture)
+* [Cloud Architecture in Details](#cloud-architecture-in-details)
 * [Getting started](#getting-started)
 * [Cloud deployment](#cloud-deployment)
 * [FinOps consideration](#finops-consideration)
@@ -93,12 +93,37 @@ the weather information.
 Both scripts are designed around schemas and meet the requirements of loosely coupled architecture we mentioned earlier.
 Both scripts are designed to publish collected data to the PubSub topic `sensor_data`
 
-## Cloud Architecture
+## Cloud Architecture in Details
 
+The next picture shows the design with details
+
+<div style="display: flex; justify-content: space-between;">
+  <div align="center">
+    <img src="pict/gcp_arch_details.png" alt="High level architecture">
+    <p>Figure 4: System architecture.</p>
+  </div>
+</div>
+
+We define the five distinct points in our design:
+
+1. This is a loosely coupled architecture, where all communication between different stages and services is implemented
+through using tables with  stable schema in Big Query
+2. High level of throughput, robustness and scalability are provided by scalable services at GCP. For example, messages 
+from millions of devices are queued in PubSub and processed to appropriate tables in BiqQuery by elastic cluster of 
+Cloud Functions 
+3. To calculate the score the 1-2 weeks worth of data is needed. The score is calculated on scheduled basis and the
+result is stored as a vector to specific path at GCS. The data from BigQuery tables then is archived to GCS in `COLDLINE` class
+4. The system is easily extensible via adding support for additional type of Event Processors, which can process output
+from sensors of various nature. Consistency is preserved thanks to loosely coupled architecture
+5. The system is designed with FinOps in mind (see the section below for cost estimation of our solution)
 
 ### Security consideration
 
+To send a message to PubSub topic, the script uses a specific Service Account with the minimum necessary 
+permissions. Since in such situation many devices are using the same SA, this potentially can be viewed as an issue
+from a security perspective due to increased attack surface. 
 
+To mitigate this problem, we can propose to use the groups of SAs, partitioned geographically or by other criteria. 
 
 ## Getting started
 
@@ -126,7 +151,10 @@ python3 weather_bot.py
 
 ## Cloud deployment
 
-Create a new project at GCP and modify the `scripts/set_env,sh` script with your value of `PROJECT_ID`:
+Required pre-requisites: the latest version of `gcloud` installed.
+
+Create a new project at GCP and modify the `scripts/set_env.sh` script with your value of `PROJECT_ID`.
+
 
 ```shell
 
@@ -151,6 +179,7 @@ gcloud services enable cloudbuild.googleapis.com
 gcloud services enable secretmanager.googleapis.com
 gcloud services enable run.googleapis.com
 gcloud services enable eventarc.googleapis.com
+gcloud services enable bigquerydatatransfer.googleapis.com
 
 gcloud pubsub topics create sensor_data
 gcloud pubsub topics create meteo_data
@@ -182,6 +211,16 @@ gcloud secrets create OPENWEATHER_API_KEY \
   --data-file=- < <(echo -n "$OPENWEATHER_API_KEY")
 ```
 
+Create bucket in `COLDLINE` class to store weekly amount of sensor data:
+
+```shell
+gcloud storage buckets create gs://livability-score-archive-data \
+  --project=$PROJECT_ID \
+  --default-storage-class=COLDLINE \
+  --location=us-east1  \
+  --uniform-bucket-level-access
+```
+
 ### Testing Cloud Functions locally:
 
 ```shell
@@ -210,7 +249,7 @@ curl localhost:8888 \
   -H "ce-time: 2020-01-02T12:34:56.789Z" \
   -H "ce-type: google.cloud.pubsub.topic.v1.messagePublished" \
   -H "ce-source: //pubsub.googleapis.com/projects/dev-iot-application/topics/sensor_data" \
-  -d '{"message": {"data": "eyJkYXkiOiAiMjAyNC0xMS0yOSIsICJ0aW1lc3RhbXAiOiAiMjAyNC0xMS0yOVQxNDozMzozNS44NTVaIiwgImRhdGEiOiB7Im1hYyI6IjQ3OkVGOjAwOjAwOjAxOjEyIiwidGVtcGVyYXR1cmUiOiAyMi45MzgsImh1bWlkaXR5IjogNDMuMzEyfX0K", 
+  -d '{"message": {"data": "W3siZGF5IjogIjIwMjQtMTEtMjkiLCAidGltZXN0YW1wIjogIjIwMjQtMTEtMjlUMTQ6MzM6MzUuODU1WiIsICJkYXRhIjogeyJtYWMiOjEyMywidGVtcGVyYXR1cmUiOiAyMi45MzgsImh1bWlkaXR5IjogNDMuMzEyfX1dCg==", 
   "attributes": {"dataset_id":"sensor_data", "table_id":"sensor_thermo_beacon"}}, 
   "subscription": "projects/MY-PROJECT/subscriptions/MY-SUB"}'
 ```
@@ -219,7 +258,7 @@ or, for testing in the cloud console:
 ```shell
 {
   "_comment": "data is base64 encoded string",
-  "data": "eyJkYXkiOiAiMjAyNC0xMS0yOSIsICJ0aW1lc3RhbXAiOiAiMjAyNC0xMS0yOVQxNDozMzozNS44NTVaIiwgImRhdGEiOiB7Im1hYyI6IjQ3OkVGOjAwOjAwOjAxOjEyIiwidGVtcGVyYXR1cmUiOiAyMi45MzgsImh1bWlkaXR5IjogNDMuMzEyfX0K",
+  "data": "W3siZGF5IjogIjIwMjQtMTEtMjkiLCAidGltZXN0YW1wIjogIjIwMjQtMTEtMjlUMTQ6MzM6MzUuODU1WiIsICJkYXRhIjogeyJtYWMiOjEyMywidGVtcGVyYXR1cmUiOiAyMi45MzgsImh1bWlkaXR5IjogNDMuMzEyfX1dCg==",
   "attributes": {"dataset_id":"sensor_data","table_id":"sensor_thermo_beacon"}
 }
 ```
@@ -268,3 +307,6 @@ gcloud scheduler jobs create pubsub meteo_data_job  \
 
 [2] https://colab.research.google.com/drive/1HkPLzr-0rOI0DGFfpil3vhfFbePAtYSA
 
+[3] https://cloud.google.com/bigquery/docs/exporting-data#sql
+
+[4] 
