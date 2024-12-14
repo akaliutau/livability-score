@@ -315,7 +315,7 @@ gcloud scheduler jobs create pubsub meteo_data_job  \
   --location=us-central1
 ```
 
-## FinOps consideration
+## FinOps considerations
 
 
 
@@ -327,4 +327,3 @@ gcloud scheduler jobs create pubsub meteo_data_job  \
 
 [3] https://cloud.google.com/bigquery/docs/exporting-data#sql
 
-[4] 
