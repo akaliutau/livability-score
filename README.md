@@ -90,18 +90,21 @@ We are using GCP as a main cloud platform to conduct all data collection and pro
 
 We consider two types of scripts:
 
-1. Scripts to collect data from local sensors installed in home via BLE. Such scripts should be designed to run in the 
+1. **Scripts to collect data from local sensors via BLE**. Such scripts should be designed to run in the 
 infinite loop periodically querying sensor. The example of such script is 'sensor_reader.py' (can be found in the root
-folder on this repository)
-2. Scripts to collect data points from publicly available APIs on the web. The example of such API which we are going to us 
-is http://api.openweathermap.org/api. The example of script which is designed to collect such type of data can be found
-in `weather_bot.py`
+folder on this repository). The question of where exactly such software should be installed is open-ended. It could be 
+some small, single-board computers (e.g. Raspberry Pi). To analyse in detail such questions is out of scope of this work.
+2. **Scripts to collect data points from publicly available APIs on the web**. The example of such API which we are going to use 
+is https://api.openweathermap.org/api. The example of script which is designed to collect such type of data can be found
+in file `weather_bot.py`
 
 In our implementation both scripts are configurable through properties file `main.properties` and `sensor_reader.properties`
-respectively.  `sensor_reader.py` requires some basic metadata about sensor, such as mac_address, the GPS coordinates of
-sensor and the UUIDs of read and write characteristics.
+respectively.  The script `sensor_reader.py` requires some basic metadata about sensor, such as _mac_address_, 
+the GPS coordinates of sensor and the UUIDs of read and write characteristics. We implemented a generic case, so the script 
+could be adopted for any sensor. In production version the process of configuring should be automated (the 
+autoconfiguration design pattern).
 
-On the other hand, `weather_bot.py` requires the latitude and longitude of geography point on Earth to get 
+On the other hand, `weather_bot.py` requires only the latitude and longitude of geography point on Earth to get 
 the weather information.
 
 Both scripts are designed around schemas and meet the requirements of loosely coupled architecture we mentioned earlier.
@@ -121,26 +124,28 @@ The next picture shows the design with details
 We define the five distinct points in our design:
 
 1. This is a loosely coupled architecture, where all communication between different stages and services is implemented
-through using tables with  stable schema in Big Query
+through using tables with stable schema in Big Query.
 2. High level of throughput, robustness and scalability are provided by scalable services at GCP. For example, messages 
 from millions of devices are queued in PubSub and processed to appropriate tables in BiqQuery by elastic cluster of 
 Cloud Functions 
 3. To calculate the score the 1-2 weeks worth of data is needed. The score is calculated on scheduled basis and the
 result is stored as a vector to specific path at GCS. The data from BigQuery tables then is archived to GCS in `COLDLINE` class
 4. The system is easily extensible via adding support for additional type of Event Processors, which can process output
-from sensors of various nature. Consistency is preserved thanks to loosely coupled architecture
+from sensors of various nature. 
 5. The system is designed with FinOps in mind (see the section below for cost estimation of our solution)
 
 The p.3 currently is implemented as a PoC, through the notebook at Colab; pp. 4 and 5 are design recommendations and
-implemented at the architecture level (wasn't implemented in our PoC)
+implemented at the architecture level (the demo for that wasn't included in our PoC)
 
-### Security consideration
+### Security considerations
 
-To send a message to PubSub topic, the script uses a specific Service Account with the minimum necessary 
+To send a message to PubSub topic, the script uses a specific Service Account (SA) with the minimum necessary 
 permissions. Since in such situation many devices are using the same SA, this potentially can be viewed as an issue
 from a security perspective due to increased attack surface. 
 
-To mitigate this problem, we can propose to use the groups of SAs, partitioned geographically or by other criteria. 
+To mitigate this problem, we can propose to use the groups of SAs, partitioned geographically or by other criteria.
+Scripts which uses SAs should be implemented with option to download a new SA key if the old one got revoked (key
+rotation design principle)
 
 ## Getting started
 
@@ -220,7 +225,7 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
 Note the name of secret key `dev-sensor-sa-key.json` - it has to be used on each machine which will run python scripts to
 collect sensor data to publish messages to PubSub topic.
 
-Create secret with name `OPENWEATHER_API_KEY` and value for the secret key to access http://api.openweathermap.org/api:
+Create secret with name `OPENWEATHER_API_KEY` and value for the secret key to access https://api.openweathermap.org/api:
 
 ```shell
 gcloud secrets create OPENWEATHER_API_KEY \
@@ -317,6 +322,50 @@ gcloud scheduler jobs create pubsub meteo_data_job  \
 
 ## FinOps considerations
 
+By adopting FinOps practices, one can effectively manage cloud costs, optimize resource utilization, 
+and drive business value. For example, our system is designed to calculate some metric (livability score), and the
+cost of those calculations has to be set as low as possible.
+
+Let's consider scenario when we have 1,000,000 homes in 100 locations, and as a result have to aggregate data from
+similar number of sensors. 
+
+Our PoC allows us to estimate the volume of data and computing resources based on statistics for one week.
+
+This statistics is summarised in the table below.
+
+| Resource                             | Usage                    | 
+|--------------------------------------|--------------------------|
+| Data, average size of record:        |                          |
+| `sensor_data.weather_data`           | 22.3 bytes               |
+| `sensor_data.sensor_thermo_beacon`   | 32.8 bytes               |
+| Cloud Run Functions, per invocation: |                          |
+ | Cloud Run Functions (1st Gen) Memory | 0.08944 gibibyte-seconds |
+ | Cloud Run Functions (1st Gen) CPU    | 0.14307 Ghz-seconds      |
+
+
+The table below shows the projected monthly cost for the cloud resource, for the scenario when each of 1,000,000 devices 
+generates at least 1 record each 10 min, and we store all data in BigQuery table and query all columns at least 
+once per month. The number of locations for the weather data is 100, and we are expecting to query these locations 
+with frequency 1 request each 3 hours (to make use of free tier of 1,000 calls per day).
+
+To use computing resources and the platform's API calls more efficiently, we will batch all uploads to 100 records/batch. 
+
+| Resource                | Usage                      | Cost, $ | Total     |
+|-------------------------|----------------------------|---------|-----------|
+| BigQuery, storage       | 129 GB                     | 2.58    |           |
+| BigQuery, querying      | 129 GB                     | 0.81    |           |
+| Cloud Functions, Memory | 3863829  gibibyte-seconds  | 9.65    |           |
+| Cloud Functions, CPU    | 6180855  Ghz-seconds       | 61.81   |           |
+|                         |                            |         | **74.85** |
+
+After 1 month the data is dumped to COLDLINE-class cloud storage with negligible cost.
+
+We can see, that computing resources are responsible for the biggest part of spending, so it makes sense to optimise
+architecture against these elements of design. One can use a _BigQuery Subscriptions_ technology - a powerful feature that 
+streamlines the process of ingesting data from PubSub directly into BigQuery [5], so we can drop one frequently invoked CF. 
+
+As for pros, this eliminates the need for complex data pipelines and simplifies the ELT process. 
+As for cons, the data has to be high-quality, meaning scripts have to prepare records for ingestion and drop invalid ones.
 
 
 ## References
@@ -327,3 +376,10 @@ gcloud scheduler jobs create pubsub meteo_data_job  \
 
 [3] https://cloud.google.com/bigquery/docs/exporting-data#sql
 
+[4] https://cloud.google.com/bigquery/pricing
+
+[5] https://cloud.google.com/functions/pricing-1stgen
+
+[6] https://cloud.google.com/pubsub/pricing
+
+[7] https://cloud.google.com/blog/products/data-analytics/pub-sub-launches-direct-path-to-bigquery-for-streaming-analytics
