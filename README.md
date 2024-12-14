@@ -131,8 +131,8 @@ result is stored as a vector to specific path at GCS. The data from BigQuery tab
 from sensors of various nature. Consistency is preserved thanks to loosely coupled architecture
 5. The system is designed with FinOps in mind (see the section below for cost estimation of our solution)
 
-The p.3 currently is implemented as a PoC, through notebook at Colab; pp. 4 and 5 are design recommendations and
-implemented as the architecture (wasn't implemented in our PoC)
+The p.3 currently is implemented as a PoC, through the notebook at Colab; pp. 4 and 5 are design recommendations and
+implemented at the architecture level (wasn't implemented in our PoC)
 
 ### Security consideration
 
