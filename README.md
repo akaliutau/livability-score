@@ -21,7 +21,7 @@ repository (folder [data](/data)), mirroring the folder structure in GCS bucket.
 * [Cloud Architecture in Details](#cloud-architecture-in-details)
 * [Getting started](#getting-started)
 * [Cloud deployment](#cloud-deployment)
-* [FinOps consideration](#finops-consideration)
+* [FinOps considerations](#finops-considerations)
 * [References](#references)
 
 ## Introduction
