@@ -144,7 +144,7 @@ permissions. Since in such situation many devices are using the same SA, this po
 from a security perspective due to increased attack surface. 
 
 To mitigate this problem, we can propose to use the groups of SAs, partitioned geographically or by other criteria.
-Scripts which uses SAs should be implemented with option to download a new SA key if the old one got revoked (key
+Scripts which use SAs should be implemented with option to download a new SA key if the old one got revoked (key
 rotation design principle)
 
 ## Getting started
@@ -339,8 +339,8 @@ This statistics is summarised in the table below.
 | `sensor_data.weather_data`           | 22.3 bytes               |
 | `sensor_data.sensor_thermo_beacon`   | 32.8 bytes               |
 | Cloud Run Functions, per invocation: |                          |
- | Cloud Run Functions (1st Gen) Memory | 0.08944 gibibyte-seconds |
- | Cloud Run Functions (1st Gen) CPU    | 0.14307 Ghz-seconds      |
+| Cloud Run Functions (1st Gen) Memory | 0.08944 gibibyte-seconds |
+| Cloud Run Functions (1st Gen) CPU    | 0.14307 Ghz-seconds      |
 
 
 The table below shows the projected monthly cost for the cloud resource, for the scenario when each of 1,000,000 devices 
@@ -358,7 +358,7 @@ To use computing resources and the platform's API calls more efficiently, we wil
 | Cloud Functions, CPU    | 6180855  Ghz-seconds       | 61.81   |           |
 |                         |                            |         | **74.85** |
 
-After 1 month the data is dumped to COLDLINE-class cloud storage with negligible cost.
+After 1 month the data is dumped to `COLDLINE`-class cloud storage with negligible cost.
 
 We can see, that computing resources are responsible for the biggest part of spending, so it makes sense to optimise
 architecture against these elements of design. One can use a _BigQuery Subscriptions_ technology - a powerful feature that 
