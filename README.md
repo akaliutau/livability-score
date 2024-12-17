@@ -42,7 +42,7 @@ sources.
 We aim to collect data from the thermometer/hygrometer sensor which potentially could have the generic schema with or
 without timestamps, other technical fields, etc. We are building our system on the basis of the following guidelines:
 
-* loosely coupled architecture
+* loosely coupled event-based architecture
 * embracing FinOps from day one
 * data access easiness for the Data Scientists, Analytics and Developer teams
 
@@ -108,7 +108,8 @@ On the other hand, `weather_bot.py` requires only the latitude and longitude of 
 the weather information.
 
 Both scripts are designed around schemas and meet the requirements of loosely coupled architecture we mentioned earlier.
-Both scripts are designed to publish collected data to the PubSub topic `sensor_data`
+Both scripts are designed to publish collected data to the PubSub topic `sensor_data` in batches, which then are forwarded
+to appropriate BigQuery tables.
 
 ## Cloud Architecture in Details
 
@@ -343,7 +344,7 @@ This statistics is summarised in the table below.
 | Cloud Run Functions (1st Gen) CPU    | 0.14307 Ghz-seconds      |
 
 
-The table below shows the projected monthly cost for the cloud resource, for the scenario when each of 1,000,000 devices 
+The table below shows the projected monthly cost for the key cloud resources, for the scenario when each of 1,000,000 devices 
 generates at least 1 record each 10 min, and we store all data in BigQuery table and query all columns at least 
 once per month. The number of locations for the weather data is 100, and we are expecting to query these locations 
 with frequency 1 request each 3 hours (to make use of free tier of 1,000 calls per day).
@@ -363,6 +364,16 @@ After 1 month the data is dumped to `COLDLINE`-class cloud storage with negligib
 We can see, that computing resources are responsible for the biggest part of spending, so it makes sense to optimise
 architecture against these elements of design. One can use a _BigQuery Subscriptions_ technology - a powerful feature that 
 streamlines the process of ingesting data from PubSub directly into BigQuery [5], so we can drop one frequently invoked CF. 
+
+Adjusted cost is presented in the table below:
+
+| Resource                | Usage                      | Cost, $ | Total    |
+|-------------------------|----------------------------|---------|----------|
+| BigQuery, storage       | 129 GB                     | 2.58    |          |
+| BigQuery, querying      | 129 GB                     | 0.81    |          |
+| Cloud Functions, Memory | 2146.56  gibibyte-seconds  | 0.005   |          |
+| Cloud Functions, CPU    | 3433.68  Ghz-seconds       | 0.03    |          |
+|                         |                            |         | **3.43** |
 
 As for pros, this eliminates the need for complex data pipelines and simplifies the ELT process. 
 As for cons, the data has to be high-quality, meaning scripts have to prepare records for ingestion and drop invalid ones.
